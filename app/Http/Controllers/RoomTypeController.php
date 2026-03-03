@@ -10,11 +10,12 @@ class RoomTypeController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
+        $perPage = $request->input('per_page', 10);
         $roomTypes = RoomType::when($search, function ($query, $search) {
             return $query->where('name', 'like', "%{$search}%");
-        })->get();
+        })->paginate($perPage)->withQueryString();
 
-        return view('rooms.type', compact('roomTypes'));
+        return view('rooms.type', compact('roomTypes', 'perPage'));
     }
 
     public function store(Request $request)

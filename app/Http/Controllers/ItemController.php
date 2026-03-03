@@ -14,7 +14,9 @@ class ItemController extends Controller
     {
         $search = $request->input('search');
         $categoryFilter = $request->input('category_filter');
-        $returnedItems = ReturnedItem::with('item')->get();
+        $perPage = $request->input('per_page', 10);
+        $returnedPerPage = $request->input('returned_per_page', 10);
+        $returnedItems = ReturnedItem::with('item')->paginate($returnedPerPage, ['*'], 'returned_page')->withQueryString();
         $categories = ItemCategory::all();
 
         $query = Item::with('category');
@@ -30,9 +32,9 @@ class ItemController extends Controller
                 });
         }
 
-        $items = $query->paginate(10);
+        $items = $query->paginate($perPage)->withQueryString();
 
-        return view('inventory.index', compact('items', 'categories', 'returnedItems'));
+        return view('inventory.index', compact('items', 'categories', 'returnedItems', 'perPage', 'returnedPerPage'));
     }
 
     public function store(Request $request)

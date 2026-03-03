@@ -15,6 +15,7 @@ class RoomsController extends Controller
     {
         $search = $request->input('search');
         $roomTypeFilter = $request->input('roomtype_filter');
+        $perPage = $request->input('per_page', 10);
 
         $roomTypes = RoomType::all();
         $inventoryItems = Item::all();
@@ -32,9 +33,9 @@ class RoomsController extends Controller
                 });
         }
 
-        $rooms = $query->paginate(10);
+        $rooms = $query->paginate($perPage)->withQueryString();
 
-        return view('rooms.index', compact('rooms', 'roomTypes', 'inventoryItems'));
+        return view('rooms.index', compact('rooms', 'roomTypes', 'inventoryItems', 'perPage'));
     }
 
     public function assignItems(Request $request, $id)
@@ -64,7 +65,7 @@ class RoomsController extends Controller
         }
 
         if ($room->items()->count() > 0) {
-            $room->status = 'occupied';
+            $room->status = 'restocked';
             $room->save();
         }
 
@@ -170,7 +171,8 @@ class RoomsController extends Controller
             'user_id' => auth()->id(),
         ]);
 
-        if ($room->items()->sum('room_item.quantity') == 0) {
+        // Update room status if all items are removed and room is not occupied by a guest
+        if ($room->items()->sum('room_item.quantity') == 0 && $room->status !== 'occupied') {
             $room->status = 'empty';
             $room->save();
         }
@@ -182,7 +184,55 @@ class RoomsController extends Controller
     {
         $room = Room::with('type', 'items')->findOrFail($id);
         $items = Item::all();
+        $roomTypes = RoomType::all();
 
-        return view('rooms.view', compact('room', 'items'));
+        return view('rooms.view', compact('room', 'items', 'roomTypes'));
+    }
+
+    /**
+     * Check in a guest to a restocked room
+     */
+    public function checkIn($id)
+    {
+        $room = Room::findOrFail($id);
+
+        if ($room->status !== 'restocked') {
+            return redirect()->back()->withErrors(['error' => 'Room must be restocked before check-in.']);
+        }
+
+        $room->update(['status' => 'occupied']);
+
+        Report::create([
+            'activity' => 'Guest checked in to room: ' . $room->name,
+            'user_id' => auth()->id(),
+        ]);
+
+        return redirect()->route('rooms.index')->with('success', 'Guest checked in to ' . $room->name . ' successfully!');
+    }
+
+    /**
+     * Check out a guest from an occupied room
+     */
+    public function checkOut($id)
+    {
+        $room = Room::findOrFail($id);
+
+        if ($room->status !== 'occupied') {
+            return redirect()->back()->withErrors(['error' => 'Room is not currently occupied.']);
+        }
+
+        // Change status based on whether room has items
+        if ($room->items()->sum('room_item.quantity') > 0) {
+            $room->update(['status' => 'restocked']);
+        } else {
+            $room->update(['status' => 'empty']);
+        }
+
+        Report::create([
+            'activity' => 'Guest checked out from room: ' . $room->name,
+            'user_id' => auth()->id(),
+        ]);
+
+        return redirect()->route('rooms.index')->with('success', 'Guest checked out from ' . $room->name . ' successfully!');
     }
 }

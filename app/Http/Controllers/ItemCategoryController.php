@@ -10,11 +10,12 @@ class ItemCategoryController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
+        $perPage = $request->input('per_page', 10);
         $categories = ItemCategory::when($search, function ($query, $search) {
             return $query->where('name', 'like', "%{$search}%");
-        })->get();
+        })->paginate($perPage)->withQueryString();
 
-        return view('inventory.itemctgry', compact('categories'));
+        return view('inventory.itemctgry', compact('categories', 'perPage'));
     }
 
     public function store(Request $request)

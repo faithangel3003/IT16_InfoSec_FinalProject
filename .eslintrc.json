@@ -1,0 +1,40 @@
+{
+    "env": {
+        "browser": true,
+        "es2021": true,
+        "jquery": true
+    },
+    "extends": [
+        "eslint:recommended"
+    ],
+    "parserOptions": {
+        "ecmaVersion": "latest",
+        "sourceType": "module"
+    },
+    "globals": {
+        "SecurityUtils": "readonly",
+        "bootstrap": "readonly",
+        "Chart": "readonly"
+    },
+    "rules": {
+        "no-unused-vars": "warn",
+        "no-undef": "warn",
+        "no-console": "warn",
+        "eqeqeq": ["error", "always"],
+        "curly": ["error", "all"],
+        "no-eval": "error",
+        "no-implied-eval": "error",
+        "no-new-func": "error",
+        "no-script-url": "error",
+        "no-self-compare": "error",
+        "no-sequences": "error",
+        "no-throw-literal": "error",
+        "no-unused-expressions": "error",
+        "no-useless-call": "error",
+        "no-useless-concat": "error",
+        "prefer-promise-reject-errors": "error",
+        "radix": "error",
+        "semi": ["error", "always"],
+        "quotes": ["warn", "single", { "allowTemplateLiterals": true }]
+    }
+}

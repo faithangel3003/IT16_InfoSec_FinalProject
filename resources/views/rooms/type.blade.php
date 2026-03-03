@@ -9,16 +9,23 @@
 @section('content')
 <div class="container py-5">
     <h2>ROOM TYPES</h2>
-    <div class="mb-4 d-flex gap-2">
-        <button class="btn btn-add-supplier w-50" onclick="toggleModal('addRoomTypeModal', 'open')">
-            Add Room Type
-        </button>
-        <button onclick="window.location.href='{{ route('rooms.index') }}'" class="btn btn-back w-50 text-center">
-            Back
-        </button>
+    
+    <div class="page-filter-bar">
+        <form action="{{ route('rooms.type') }}" method="GET" class="search-form">
+            <input type="text" name="search" class="search-input" placeholder="Search room types..." value="{{ request('search') }}" />
+            <button type="submit" class="btn-search">Search</button>
+        </form>
+        <div class="filter-right">
+            <button class="btn-action-secondary" onclick="window.location.href='{{ route('rooms.index') }}'">
+                <i class="bi bi-arrow-left"></i> Back
+            </button>
+            <button class="btn-action-primary" onclick="toggleModal('addRoomTypeModal', 'open')">
+                <i class="bi bi-plus-circle"></i> Add Room Type
+            </button>
+        </div>
     </div>
 
-    <!-- Modal -->
+    <!-- Add Room Type Modal -->
     <div class="supplier-modal hidden" id="addRoomTypeModal">
         <div class="modal-content">
             <div class="supplier-modal-header">
@@ -40,35 +47,47 @@
         </div>
     </div>
 
+    <!-- Edit Room Type Modal -->
+    <div class="supplier-modal hidden" id="editRoomTypeModal">
+        <div class="modal-content">
+            <div class="supplier-modal-header">
+                Edit Room Type
+            </div>
+            <div class="modal-body">
+                <form id="editRoomTypeForm" method="POST">
+                    @csrf
+                    @method('PUT')
+                    <div class="mb-3">
+                        <label for="edit_name" class="form-label">Room Type Name</label>
+                        <input type="text" class="form-control" id="edit_name" name="name" placeholder="Enter room type name" required>
+                    </div>
+                    <div class="button-row">
+                        <button type="submit" class="btn-update">Update Room Type</button>
+                        <button type="button" class="btn-cancel" onclick="toggleModal('editRoomTypeModal', 'close')">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Room Types Table -->
-    <div class="glass-card glass-card-wide mx-auto">
-        <div class="table-responsive mt-2">
-            <table class="table table-bordered table-striped align-middle supplier-table">
-                <thead class="table-light">
-                    <tr>
-                        <td colspan="6">
-                            <form action="{{ route('rooms.type') }}" method="GET" class="d-flex justify-content-end">
-                                <input type="text" name="search" class="form-control form-control-sm me-2" placeholder="Search room type" />
-                                <button type="submit" class="btn btn-sm btn-primary">Search</button>
-                            </form>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Room Type ID</th>
-                        <th>Room Type Name</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
+    <div class="page-table-card">
+        <table class="page-table">
+            <thead>
+                <tr>
+                    <th>Room Type Name</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
                     @forelse($roomTypes as $type)
                         <tr>
-                            <td>{{ $type->roomtype_id }}</td>
                             <td>{{ $type->name }}</td>
                             <td>
                                 <div class="d-flex gap-2">
-                                    <a href="{{ route('rooms.type.edit', $type->roomtype_id) }}" class="btn btn-edit">
+                                    <button type="button" class="btn btn-edit" onclick="openEditModal('{{ $type->roomtype_id }}', '{{ addslashes($type->name) }}')">
                                         <i class="bi bi-pencil-square"></i>
-                                    </a>
+                                    </button>
                                     <form action="{{ route('rooms.type.destroy', $type->roomtype_id) }}" method="POST" class="d-inline">
                                         @csrf
                                         @method('DELETE')
@@ -81,12 +100,47 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="3" class="text-center">No room types found.</td>
+                            <td colspan="2" class="text-center">No room types found.</td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
-        </div>
+        @include('partials.pagination', ['paginator' => $roomTypes])
     </div>
 </div>
+
+<script>
+    function toggleModal(modalId, action = 'toggle') {
+        const modal = document.getElementById(modalId);
+        
+        if (action === 'open') {
+            modal.classList.remove('hidden');
+            modal.classList.add('show');
+        } else if (action === 'close') {
+            const modalContent = modal.querySelector('.modal-content');
+            modalContent.classList.add('fade-out');
+            
+            setTimeout(() => {
+                modal.classList.remove('show');
+                modal.classList.add('hidden');
+                modalContent.classList.remove('fade-out');
+            }, 500);
+        } else {
+            if (modal.classList.contains('hidden')) {
+                toggleModal(modalId, 'open');
+            } else {
+                toggleModal(modalId, 'close');
+            }
+        }
+    }
+    
+    function openEditModal(typeId, typeName) {
+        const form = document.getElementById('editRoomTypeForm');
+        form.action = '{{ url("rooms/types") }}/' + typeId;
+        
+        document.getElementById('edit_name').value = typeName;
+        
+        toggleModal('editRoomTypeModal', 'open');
+    }
+</script>
 @endsection

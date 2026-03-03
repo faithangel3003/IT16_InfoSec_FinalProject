@@ -9,20 +9,28 @@
 @section('content')
 <div class="container py-5">
     <h2>INVENTORY</h2>
-    <div class="mb-4 d-flex gap-2">
-        <button class="btn btn-add-supplier w-50" onclick="toggleModal('addItemModal', 'open')">
-            Add Item
-        </button>
-        <button onclick="window.location.href='{{ route('inventory.itemctgry') }}'" class="btn btn-page-link w-50 text-center">
-            Item Categories
-        </button>
+    
+    <div class="page-filter-bar">
+        <form action="{{ route('inventory.index') }}" method="GET" class="filter-left">
+            <select name="category_filter" class="search-input" style="min-width: 150px;" onchange="this.form.submit()">
+                <option value="">All Categories</option>
+                @foreach($categories as $category)
+                    <option value="{{ $category->itemctgry_id }}" {{ request('category_filter') == $category->itemctgry_id ? 'selected' : '' }}>
+                        {{ $category->name }}
+                    </option>
+                @endforeach
+            </select>
+            <input type="text" name="search" class="search-input" placeholder="Search items..." value="{{ request('search') }}" />
+            <button type="submit" class="btn-search">Search</button>
+        </form>
+        <div class="filter-right">
+            <button class="btn-action-primary" onclick="toggleModal('addItemModal', 'open')">
+                <i class="bi bi-plus-circle"></i> Add Item
+            </button>
+        </div>
     </div>
-    <div>
-        <button class="btn btn-black w-100 h-25" onclick="window.location.href='{{ route('stock_out.index') }}'">
-            <i class="bi bi-box-seam"></i> STOCK-OUT CART
-        </button>
-    </div>
-    <!-- Modal -->
+    
+    <!-- Add Item Modal -->
     <div class="supplier-modal hidden" id="addItemModal">
         <div class="modal-content">
             <div class="supplier-modal-header">
@@ -57,6 +65,41 @@
         </div>
     </div>
 
+    <!-- Edit Item Modal -->
+    <div class="supplier-modal hidden" id="editItemModal">
+        <div class="modal-content">
+            <div class="supplier-modal-header">
+                Edit Item
+            </div>
+            <div class="modal-body">
+                <form id="editItemForm" method="POST">
+                    @csrf
+                    @method('PUT')
+                    <div class="mb-3">
+                        <label for="edit_item_name" class="form-label">Item Name</label>
+                        <input type="text" class="form-control" id="edit_item_name" name="name" placeholder="Enter item name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_category_id" class="form-label">Item Category</label>
+                        <select class="form-control" id="edit_category_id" name="category_id" required>
+                            @foreach($categories as $category)
+                                <option value="{{ $category->itemctgry_id }}">{{ $category->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_price" class="form-label">Price</label>
+                        <input type="number" step="0.01" class="form-control" id="edit_price" name="price" placeholder="Enter price" required>
+                    </div>
+                    <div class="button-row">
+                        <button type="submit" class="btn-update">Update Item</button>
+                        <button type="button" class="btn-cancel" onclick="toggleModal('editItemModal', 'close')">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Stock-Out Modal -->
     <div class="supplier-modal hidden" id="stockOutModal">
         <div class="modal-content">
@@ -85,41 +128,21 @@
     </div>
 
     <!-- Items Table -->
-    <div class="glass-card glass-card-wide mx-auto">
-        <div class="table-responsive mt-2">
-            <table class="table table-bordered table-striped align-middle supplier-table">
-                <thead class="table-light">
+    <div class="page-table-card">
+        <table class="page-table">
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Item Name</th>
+                    <th>Price</th>
+                    <th>In Stock</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($items as $item)
                     <tr>
-                        <td colspan="6">
-                            <form action="{{ route('inventory.index') }}" method="GET" class="d-flex justify-content-end">
-                                <label for="category_filter" class="me-2 fw-bold filter-label">Item Filter:</label>
-                                    <select name="category_filter" id="category_filter" class="form-select form-select-sm filter-dropdown me-3" onchange="this.form.submit()">
-                                        <option value="" {{ request('category_filter') == '' ? 'selected' : '' }}>All Categories</option>
-                                        @foreach($categories as $category)
-                                            <option value="{{ $category->itemctgry_id }}" {{ request('category_filter') == $category->itemctgry_id ? 'selected' : '' }}>
-                                                {{ $category->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <input type="text" name="search" class="form-control form-control-sm me-2" placeholder="Search items..." value="{{ request('search') }}" />
-                                    <button type="submit" class="btn btn-sm btn-primary">Search</button>
-                            </form>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th>Item ID</th>
-                        <th>Category</th>
-                        <th>Item Name</th>
-                        <th>Price</th>
-                        <th>In Stock</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($items as $item)
-                        <tr>
-                            <td>{{ $item->item_id }}</td>
-                            <td>{{ $item->category->name }}</td>
+                        <td>{{ $item->category->name }}</td>
                             <td>{{ $item->name }}</td>
                             <td>{{ number_format($item->price, 2) }}</td>
                             <td>
@@ -133,11 +156,12 @@
                                 <div class="d-flex gap-2">
                                     <button type="button" class="btn btn-sm btn-small-black" 
                                         onclick="openStockOutModal('{{ $item->item_id }}', '{{ $item->name }}', {{ $item->in_stock }})">
-                                        Stock-Out
+                                        Move to Stock-Out
                                     </button>
-                                    <a href="{{ route('inventory.edit', $item->item_id) }}" class="btn btn-edit">
+                                    <button type="button" class="btn btn-edit" 
+                                        onclick="openEditItemModal('{{ $item->item_id }}', '{{ addslashes($item->name) }}', '{{ $item->category_id }}', '{{ $item->price }}')">
                                         <i class="bi bi-pencil-square"></i>
-                                    </a>
+                                    </button>
                                     <form action="{{ route('inventory.destroy', $item->item_id) }}" method="POST" class="d-inline">
                                         @csrf
                                         @method('DELETE')
@@ -150,49 +174,96 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center">No items found.</td>
+                            <td colspan="5" class="text-center">No items found.</td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
-        </div>
+        @include('partials.pagination', ['paginator' => $items])
     </div>
 </div>
 <br>
-<div class="glass-card glass-card-wide mx-auto mt-4">
-    <h2 class=>Returned Items</h2>
-    <div class="table-responsive mt-2">
-        <table class="table table-bordered table-striped align-middle supplier-table">
-            <thead class="table-light">
-                <tr>
-                    <th>Returned Item Name</th>
-                    <th>Quantity</th>
-                    <th>Reason</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($returnedItems as $returnedItem)
-                    <tr id="returned-item-{{ $returnedItem->item_id }}">
-                        <td>{{ $returnedItem->item->name }}</td>
-                        <td id="quantity-{{ $returnedItem->item_id }}">{{ $returnedItem->quantity }}</td>
-                        <td style="width: 50%;">{{ $returnedItem->reason }}</td>
-                        <td> 
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-md btn-small-black" 
-                                    onclick="openStockOutModal('{{ $returnedItem->item_id }}', '{{ $returnedItem->item->name }}', {{ $returnedItem->quantity }})">
-                                    Move to Stock-Out
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="4" class="text-center">No returned items found.</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
+<div class="page-table-card mt-4">
+    <div style="padding: 15px 20px; border-bottom: 1px solid #dee2e6;">
+        <h4 style="margin: 0; color: #1e2a47; font-weight: 600;">Returned Items</h4>
     </div>
+    <table class="page-table">
+        <thead>
+            <tr>
+                <th>Returned Item Name</th>
+                <th>Quantity</th>
+                <th>Reason</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($returnedItems as $returnedItem)
+                <tr id="returned-item-{{ $returnedItem->item_id }}">
+                    <td>{{ $returnedItem->item->name }}</td>
+                    <td id="quantity-{{ $returnedItem->item_id }}">{{ $returnedItem->quantity }}</td>
+                    <td style="width: 50%;">{{ $returnedItem->reason }}</td>
+                    <td> 
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-md btn-small-black" 
+                                onclick="openStockOutModal('{{ $returnedItem->item_id }}', '{{ $returnedItem->item->name }}', {{ $returnedItem->quantity }})">
+                                Move to Stock-Out
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="4" class="text-center">No returned items found.</td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
+    @include('partials.pagination', ['paginator' => $returnedItems])
 </div>
+
+<script>
+    function toggleModal(modalId, action = 'toggle') {
+        const modal = document.getElementById(modalId);
+        
+        if (action === 'open') {
+            modal.classList.remove('hidden');
+            modal.classList.add('show');
+        } else if (action === 'close') {
+            const modalContent = modal.querySelector('.modal-content');
+            modalContent.classList.add('fade-out');
+            
+            setTimeout(() => {
+                modal.classList.remove('show');
+                modal.classList.add('hidden');
+                modalContent.classList.remove('fade-out');
+            }, 500);
+        } else {
+            if (modal.classList.contains('hidden')) {
+                toggleModal(modalId, 'open');
+            } else {
+                toggleModal(modalId, 'close');
+            }
+        }
+    }
+    
+    function openStockOutModal(itemId, itemName, maxQty) {
+        document.getElementById('stock_out_item_id').value = itemId;
+        document.getElementById('stock_out_item_name').value = itemName;
+        document.getElementById('stock_out_quantity').max = maxQty;
+        document.getElementById('stock_out_quantity').value = 1;
+        document.getElementById('stockOutForm').action = '/inventory/' + itemId + '/stock-out';
+        toggleModal('stockOutModal', 'open');
+    }
+    
+    function openEditItemModal(itemId, name, categoryId, price) {
+        const form = document.getElementById('editItemForm');
+        form.action = '{{ url("inventory") }}/' + itemId;
+        
+        document.getElementById('edit_item_name').value = name;
+        document.getElementById('edit_category_id').value = categoryId;
+        document.getElementById('edit_price').value = price;
+        
+        toggleModal('editItemModal', 'open');
+    }
+</script>
 @endsection

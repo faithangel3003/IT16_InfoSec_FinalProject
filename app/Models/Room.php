@@ -20,8 +20,29 @@ class Room extends Model
     public static $rules = [
         'name' => 'required|string|max:255|unique:rooms,name',
         'roomtype_id' => 'required|exists:room_types,roomtype_id',
-        'status' => 'in:empty,occupied',
+        'status' => 'in:empty,restocked,occupied',
     ];
+
+    /**
+     * Check if room has items assigned
+     */
+    public function hasItems(): bool
+    {
+        return $this->items()->sum('room_item.quantity') > 0;
+    }
+
+    /**
+     * Get status badge class for display
+     */
+    public function getStatusBadgeClassAttribute(): string
+    {
+        return match($this->status) {
+            'empty' => 'badge-empty',
+            'restocked' => 'badge-restocked',
+            'occupied' => 'badge-occupied',
+            default => 'badge-secondary',
+        };
+    }
 
     protected static function booted()
     {

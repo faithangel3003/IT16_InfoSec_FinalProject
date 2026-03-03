@@ -9,13 +9,28 @@
 @section('content')
 <div class="container py-5">
     <h2>ROOMS</h2>
-    <div class="mb-4 d-flex gap-2">
-        <button class="btn btn-add-supplier w-50" onclick="toggleModal('addRoomModal', 'open')">
-            Add Room
-        </button>
-        <button onclick="window.location.href='{{ route('rooms.type') }}'" class="btn btn-page-link w-50 text-center">
-            Room Types
-        </button>
+    
+    <div class="page-filter-bar">
+        <form action="{{ route('rooms.index') }}" method="GET" class="filter-left">
+            <select name="roomtype_filter" class="search-input" style="width: auto; min-width: 150px;" onchange="this.form.submit()">
+                <option value="" {{ request('roomtype_filter') == '' ? 'selected' : '' }}>All Room Types</option>
+                @foreach($roomTypes as $type)
+                    <option value="{{ $type->roomtype_id }}" {{ request('roomtype_filter') == $type->roomtype_id ? 'selected' : '' }}>
+                        {{ $type->name }}
+                    </option>
+                @endforeach
+            </select>
+            <input type="text" name="search" class="search-input" placeholder="Search rooms..." value="{{ request('search') }}" />
+            <button type="submit" class="btn-search">Search</button>
+        </form>
+        <div class="filter-right">
+            <button type="button" class="btn-action-secondary" onclick="window.location.href='{{ route('rooms.type') }}'">
+                <i class="bi bi-list-ul"></i> Room Types
+            </button>
+            <button type="button" class="btn-action-primary" onclick="toggleModal('addRoomModal', 'open')">
+                <i class="bi bi-plus-circle"></i> Add Room
+            </button>
+        </div>
     </div>
 
     <!-- Modal -->
@@ -86,63 +101,56 @@
     </div>
 
     <!-- Rooms Table -->
-    <div class="glass-card glass-card-wide mx-auto">
-        <div class="table-responsive mt-2">
-            <table class="table table-bordered table-striped align-middle supplier-table">
-                <thead class="table-light">
+    <div class="page-table-card">
+        <table class="page-table">
+            <thead>
+                <tr>
+                    <th>Room Name</th>
+                    <th>Room Type</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($rooms as $room)
                     <tr>
-                        <td colspan="6">
-                            <form action="{{ route('rooms.index') }}" method="GET" class="d-flex justify-content-end">
-                                <label for="roomtype_filter" class="me-2 fw-bold filter-label">Room Filter:</label>
-                                <select name="roomtype_filter" id="roomtype_filter" class="form-select form-select-sm filter-dropdown me-3" onchange="this.form.submit()">
-                                    <option value="" {{ request('roomtype_filter') == '' ? 'selected' : '' }}>All Room Types</option>
-                                    @foreach($roomTypes as $type)
-                                        <option value="{{ $type->roomtype_id }}" {{ request('roomtype_filter') == $type->roomtype_id ? 'selected' : '' }}>
-                                            {{ $type->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                <input type="text" name="search" class="form-control form-control-sm me-2" placeholder="Search rooms..." value="{{ request('search') }}" />
-                                <button type="submit" class="btn btn-sm btn-primary">Search</button>
-                            </form>
+                        <td>{{ $room->name }}</td>
+                        <td>{{ $room->type->name }}</td>
+                        <td>
+                            @if ($room->status === 'occupied')
+                                <span class="badge badge-occupied">Occupied</span>
+                            @elseif ($room->status === 'restocked')
+                                <span class="badge badge-restocked">Restocked</span>
+                            @else
+                                <span class="badge badge-empty">Empty</span>
+                            @endif
                         </td>
-                    </tr>
-                    <tr>
-                        <th>Room ID</th>
-                        <th>Room Name</th>
-                        <th>Room Type</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($rooms as $room)
-                        <tr>
-                            <td>{{ $room->room_id }}</td>
-                            <td>{{ $room->name }}</td>
-                            <td>{{ $room->type->name }}</td>
-                            <td>
+                        <td>
+                            <div class="d-flex gap-2">
                                 @if ($room->status === 'occupied')
-                                    <span class="badge badge-occupied">Occupied</span>
-                                @else
-                                    <span class="badge badge-empty">Empty</span>
+                                    <form action="{{ route('rooms.checkout', $room->room_id) }}" method="POST" style="display: inline;">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-warning">Check-Out</button>
+                                    </form>
+                                @elseif ($room->status === 'restocked')
+                                    <form action="{{ route('rooms.checkin', $room->room_id) }}" method="POST" style="display: inline;">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-success">Check-In</button>
+                                    </form>
                                 @endif
-                            </td>
-                            <td>
-                                <div class="d-flex gap-2">
-                                    <button type="button" class="btn btn-sm btn-assign" onclick="toggleAssignItemsModal('{{ $room->room_id }}')">Assign Items</button>
-                                    <a href="{{ route('rooms.view', $room->room_id) }}" class="btn btn-sm btn-violet">View Room</a>
-                                </div>            
-                            </td> 
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="5" class="text-center">No rooms found.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+                                <button type="button" class="btn btn-sm btn-assign" onclick="toggleAssignItemsModal('{{ $room->room_id }}')">Assign Items</button>
+                                <a href="{{ route('rooms.view', $room->room_id) }}" class="btn btn-sm btn-violet">View Room</a>
+                            </div>            
+                        </td> 
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="4" class="text-center">No rooms found.</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+        @include('partials.pagination', ['paginator' => $rooms])
     </div>
 </div>
 @endsection

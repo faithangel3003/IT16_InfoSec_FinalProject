@@ -11,7 +11,7 @@
 <div class="container py-5">
     <!-- Action Buttons -->
     <div class="mb-4 d-flex gap-2">
-        <button class="btn btn-major-edit w-40" onclick="window.location.href='{{ route('rooms.edit', $room->room_id) }}'">
+        <button class="btn btn-major-edit w-40" onclick="openEditRoomModal()">
             Edit Room Information
         </button>
         <button class="btn btn-major-delete w-40" onclick="event.preventDefault(); if(confirm('Are you sure you want to delete this room?')) document.getElementById('delete-room-form').submit();">
@@ -30,6 +30,28 @@
 
     <div class="text-center mb-4">
         <h2 class="fw-bold text-primary">{{ $room->room_id }} - {{ $room->name }}</h2>
+        <div class="mt-2">
+            @if ($room->status === 'occupied')
+                <span class="badge badge-occupied" style="font-size: 1rem; padding: 8px 20px;">Occupied (Guest)</span>
+            @elseif ($room->status === 'restocked')
+                <span class="badge badge-restocked" style="font-size: 1rem; padding: 8px 20px;">Restocked</span>
+            @else
+                <span class="badge badge-empty" style="font-size: 1rem; padding: 8px 20px;">Empty</span>
+            @endif
+        </div>
+        <div class="mt-3">
+            @if ($room->status === 'restocked')
+                <form action="{{ route('rooms.checkin', $room->room_id) }}" method="POST" style="display: inline;">
+                    @csrf
+                    <button type="submit" class="btn btn-success">Check-In Guest</button>
+                </form>
+            @elseif ($room->status === 'occupied')
+                <form action="{{ route('rooms.checkout', $room->room_id) }}" method="POST" style="display: inline;">
+                    @csrf
+                    <button type="submit" class="btn btn-warning">Check-Out Guest</button>
+                </form>
+            @endif
+        </div>
     </div>
 
     <div class="glass-card glass-card-wide mx-auto">
@@ -107,4 +129,77 @@
         </div>
     </div>
 </div>
+
+<!-- Edit Room Modal -->
+<div class="supplier-modal hidden" id="editRoomModal">
+    <div class="modal-content">
+        <div class="supplier-modal-header">
+            Edit Room Information
+        </div>
+        <div class="modal-body">
+            <form action="{{ route('rooms.update', ['id' => $room->room_id]) }}" method="POST">
+                @csrf
+                @method('PUT')
+                <div class="mb-3">
+                    <label for="edit_room_name" class="form-label">Room Name</label>
+                    <input type="text" class="form-control" id="edit_room_name" name="name" 
+                        value="{{ $room->name }}" 
+                        placeholder="Enter room name" required>
+                </div>
+                <div class="mb-3">
+                    <label for="edit_roomtype_id" class="form-label">Room Type</label>
+                    <select class="form-control" id="edit_roomtype_id" name="roomtype_id" required>
+                        @foreach($roomTypes as $type)
+                            <option value="{{ $type->roomtype_id }}" 
+                                {{ $room->roomtype_id == $type->roomtype_id ? 'selected' : '' }}>
+                                {{ $type->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="button-row">
+                    <button type="submit" class="btn-update">Update Room</button>
+                    <button type="button" class="btn-cancel" onclick="toggleModal('editRoomModal', 'close')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleModal(modalId, action = 'toggle') {
+        const modal = document.getElementById(modalId);
+        
+        if (action === 'open') {
+            modal.classList.remove('hidden');
+            modal.classList.add('show');
+        } else if (action === 'close') {
+            const modalContent = modal.querySelector('.modal-content');
+            modalContent.classList.add('fade-out');
+            
+            setTimeout(() => {
+                modal.classList.remove('show');
+                modal.classList.add('hidden');
+                modalContent.classList.remove('fade-out');
+            }, 500);
+        } else {
+            if (modal.classList.contains('hidden')) {
+                toggleModal(modalId, 'open');
+            } else {
+                toggleModal(modalId, 'close');
+            }
+        }
+    }
+    
+    function openReturnItemModal(itemId, maxQty) {
+        document.getElementById('return_item_id').value = itemId;
+        document.getElementById('return_quantity').max = maxQty;
+        document.getElementById('return_quantity').value = 1;
+        toggleModal('returnItemModal', 'open');
+    }
+    
+    function openEditRoomModal() {
+        toggleModal('editRoomModal', 'open');
+    }
+</script>
 @endsection

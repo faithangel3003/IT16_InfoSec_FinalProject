@@ -30,4 +30,9 @@ class RoomType extends Model
             $roomType->roomtype_id = $newId;
         });
     }
+
+    public function rooms()
+    {
+        return $this->hasMany(Room::class, 'roomtype_id', 'roomtype_id');
+    }
 }

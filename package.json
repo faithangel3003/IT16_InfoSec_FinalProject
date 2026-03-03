@@ -3,12 +3,16 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "lint": "eslint public/js/**/*.js resources/js/**/*.js",
+        "lint:fix": "eslint --fix public/js/**/*.js resources/js/**/*.js",
+        "audit": "npm run lint && echo 'JavaScript linting complete'"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",
         "axios": "^1.8.2",
         "concurrently": "^9.0.1",
+        "eslint": "^10.0.2",
         "laravel-vite-plugin": "^1.2.0",
         "tailwindcss": "^4.0.0",
         "vite": "^6.2.4"

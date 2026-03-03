@@ -1,0 +1,27 @@
+includes:
+    - ./vendor/phpstan/phpstan/conf/bleedingEdge.neon
+
+parameters:
+    paths:
+        - app
+        - config
+        - database
+        - routes
+
+    # Level 1-9, the higher the stricter
+    level: 5
+
+    excludePaths:
+        - vendor
+        - node_modules
+        - storage
+        - bootstrap/cache
+
+    ignoreErrors:
+        # Ignore undefined method errors for Laravel magic methods
+        - '#Call to an undefined method Illuminate\\Database\\Eloquent\\Builder::#'
+        - '#Call to an undefined method Illuminate\\Database\\Query\\Builder::#'
+
+    # Treat Laravel facades correctly
+    checkMissingIterableValueType: false
+    checkGenericClassInNonGenericObjectType: false

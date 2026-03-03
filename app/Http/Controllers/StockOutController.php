@@ -4,17 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Models\StockOut;
 use App\Models\Item;
+use App\Models\Room;
 use App\Models\ReturnedItem;
 use App\Models\Report;
 use Illuminate\Http\Request;
 
 class StockOutController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $stockOutItems = StockOut::with('item')->get();
+        $perPage = $request->input('per_page', 10);
+        $stockOutItems = StockOut::with('item')->paginate($perPage)->withQueryString();
+        $rooms = Room::with('type')->orderBy('name')->get();
 
-        return view('stock_out.index', compact('stockOutItems'));
+        return view('stock_out.index', compact('stockOutItems', 'rooms', 'perPage'));
     }
 
     public function addToStockOut(Request $request, $id)
@@ -75,17 +78,53 @@ class StockOutController extends Controller
 
     public function finalize(Request $request)
     {
-        $stockOutItems = StockOut::with('item')->get();
+        $request->validate([
+            'room_id' => 'required|exists:rooms,room_id',
+            'stock_out_id' => 'required|exists:stock_out,id',
+            'quantity' => 'required|integer|min:1',
+        ]);
 
-        foreach ($stockOutItems as $item) {
-            Report::create([
-                'activity' => 'Stocked out item: ' . $item->item->name . ' (Quantity: ' . $item->quantity . ')',
-                'user_id' => auth()->id(),
+        $stockOutItem = StockOut::with('item')->find($request->stock_out_id);
+
+        if (!$stockOutItem) {
+            return redirect()->route('stock_out.index')->with('error', 'Item not found in stock-out cart.');
+        }
+
+        $quantityToAssign = min($request->quantity, $stockOutItem->quantity);
+
+        $room = Room::find($request->room_id);
+
+        // Attach item to room (or update quantity if already exists)
+        $existingPivot = $room->items()->where('room_item.item_id', $stockOutItem->item_id)->first();
+        
+        if ($existingPivot) {
+            $room->items()->updateExistingPivot($stockOutItem->item_id, [
+                'quantity' => $existingPivot->pivot->quantity + $quantityToAssign
+            ]);
+        } else {
+            $room->items()->attach($stockOutItem->item_id, [
+                'quantity' => $quantityToAssign
             ]);
         }
 
-        StockOut::truncate();
+        $itemName = $stockOutItem->item->name;
 
-        return redirect()->route('stock_out.index')->with('success', 'All items have been stocked out.');
+        Report::create([
+            'activity' => 'Assigned item: ' . $itemName . ' (Qty: ' . $quantityToAssign . ') to Room: ' . $room->name,
+            'user_id' => auth()->id(),
+        ]);
+
+        // Update or delete stock out item based on remaining quantity
+        if ($quantityToAssign >= $stockOutItem->quantity) {
+            $stockOutItem->delete();
+        } else {
+            $stockOutItem->quantity -= $quantityToAssign;
+            $stockOutItem->save();
+        }
+
+        // Update room status to restocked if it has items
+        $room->update(['status' => 'restocked']);
+
+        return redirect()->route('stock_out.index')->with('success', $itemName . ' (Qty: ' . $quantityToAssign . ') has been assigned to ' . $room->name . '.');
     }
 }

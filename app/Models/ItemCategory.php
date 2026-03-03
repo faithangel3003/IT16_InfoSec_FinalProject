@@ -30,4 +30,9 @@ class ItemCategory extends Model
             $itemCategory->itemctgry_id = $newId;
         });
     }
+
+    public function items()
+    {
+        return $this->hasMany(Item::class, 'category_id', 'itemctgry_id');
+    }
 }

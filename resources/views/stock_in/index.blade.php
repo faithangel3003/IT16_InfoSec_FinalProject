@@ -8,11 +8,18 @@
 
 @section('content')
 <div class="container py-5">
-    <h2 class="fw-bold text-center mb-5 text-primary">STOCK-IN</h2>
-    <div class="mb-4 d-flex gap-2">
-        <button class="btn btn-add-supplier w-100 text-center" onclick="toggleModal('addStockInModal', 'open')">
-            Add Stock-In
-        </button>
+    <h2>STOCK-IN</h2>
+    
+    <div class="page-filter-bar">
+        <form action="{{ route('stock_in.index') }}" method="GET" class="search-form">
+            <input type="text" name="search" class="search-input" placeholder="Search stock-in..." value="{{ request('search') }}" />
+            <button type="submit" class="btn-search">Search</button>
+        </form>
+        <div class="filter-right">
+            <button type="button" class="btn-action-primary" onclick="toggleModal('addStockInModal', 'open')">
+                <i class="bi bi-plus-circle"></i> Add Stock-In
+            </button>
+        </div>
     </div>
 
     <!-- Modal -->
@@ -79,47 +86,36 @@
     </div>
 
     <!-- Stock-In Table -->
-    <div class="glass-card glass-card-wide mx-auto">
-        <div class="table-responsive mt-2">
-            <table class="table table-bordered table-striped align-middle supplier-table">
-                <thead class="table-light">
+    <div class="page-table-card">
+        <table class="page-table">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Supplier</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Total Price</th>
+                    <th>Stock-In Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($stockIns as $stockIn)
                     <tr>
-                        <td colspan="7">
-                            <form action="{{ route('stock_in.index') }}" method="GET" class="d-flex justify-content-end">
-                                <input type="text" name="search" class="form-control form-control-sm me-2" placeholder="Search stock-in records..." />
-                                <button type="submit" class="btn btn-sm btn-primary">Search</button>
-                            </form>
-                        </td>
+                        <td>{{ $stockIn->item->name }}</td>
+                        <td>{{ $stockIn->supplier->name }}</td> 
+                        <td>{{ $stockIn->quantity }}</td>
+                        <td>{{ number_format($stockIn->price, 2) }}</td>
+                        <td>{{ number_format($stockIn->total_price, 2) }}</td>
+                        <td>{{ $stockIn->stockin_date }}</td>
                     </tr>
+                @empty
                     <tr>
-                        <th>Stock-In ID</th>
-                        <th>Item</th>
-                        <th>Supplier</th>
-                        <th>Quantity</th>
-                        <th>Price</th>
-                        <th>Total Price</th>
-                        <th>Stock-In Date</th>
+                        <td colspan="6" class="text-center">No stock-in records found.</td>
                     </tr>
-                </thead>
-                <tbody>
-                    @forelse($stockIns as $stockIn)
-                        <tr>
-                            <td>{{ $stockIn->stockin_id }}</td>
-                            <td>{{ $stockIn->item->name }}</td>
-                            <td>{{ $stockIn->supplier->name }}</td> 
-                            <td>{{ $stockIn->quantity }}</td>
-                            <td>{{ number_format($stockIn->price, 2) }}</td>
-                            <td>{{ number_format($stockIn->total_price, 2) }}</td>
-                            <td>{{ $stockIn->stockin_date }}</td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="7" class="text-center">No stock-in records found.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+                @endforelse
+            </tbody>
+        </table>
+        @include('partials.pagination', ['paginator' => $stockIns])
     </div>
 </div>
 @endsection

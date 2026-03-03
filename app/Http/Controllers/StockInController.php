@@ -10,17 +10,18 @@ use Illuminate\Http\Request;
 
 class StockInController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $perPage = $request->input('per_page', 10);
         // Fetch all stock-in records with related items
-        $stockIns = StockIn::with('item', 'supplier')->get();
+        $stockIns = StockIn::with('item', 'supplier')->paginate($perPage)->withQueryString();
 
         $suppliers = Supplier::all();
 
         // Fetch all items for the dropdown in the add stock-in form
         $items = Item::all();
 
-        return view('stock_in.index', compact('stockIns', 'items', 'suppliers'));
+        return view('stock_in.index', compact('stockIns', 'items', 'suppliers', 'perPage'));
     }
 
     public function create()

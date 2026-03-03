@@ -11,25 +11,27 @@ class SupplierController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
+        $perPage = $request->input('per_page', 10);
         $suppliers = Supplier::when($search, function ($query, $search) {
             return $query->where('name', 'like', "%{$search}%")
                          ->orWhere('address', 'like', "%{$search}%")
                          ->orWhere('number', 'like', "%{$search}%")
                          ->orWhere('contact_person', 'like', "%{$search}%");
-        })->get();
+        })->paginate($perPage)->withQueryString();
 
-        return view('suppliers.index', compact('suppliers'));
+        return view('suppliers.index', compact('suppliers', 'perPage'));
     }
     public function store(Request $request)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:suppliers,name',
-            'address' => 'required|string|max:255|unique:suppliers,address',
+            'address' => 'required|string|max:255',
             'number' => 'required|string|max:15|unique:suppliers,number',
-            'contact_person' => 'required|string|max:255|unique:suppliers,contact_person',
+            'contact_person' => 'required|string|max:255',
         ]);
-        $lastSupplier = Supplier::latest('supplier_id')->first();
-        $customId = $lastSupplier ? 'S' . str_pad(intval($lastSupplier->supplier_id) + 1, 3, '0', STR_PAD_LEFT) : 'S001';        
+        $lastSupplier = Supplier::orderBy('supplier_id', 'desc')->first();
+        $lastIdNum = $lastSupplier ? intval(substr($lastSupplier->supplier_id, 1)) : 0;
+        $customId = 'S' . str_pad($lastIdNum + 1, 3, '0', STR_PAD_LEFT);        
         $supplier = Supplier::create([
             'supplier_id' => $customId,
             ...$validated,
@@ -54,9 +56,9 @@ class SupplierController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:suppliers,name,' . $supplier->supplier_id . ',supplier_id',
-            'address' => 'required|string|max:255|unique:suppliers,address,' . $supplier->supplier_id . ',supplier_id',
+            'address' => 'required|string|max:255',
             'number' => 'required|string|max:15|unique:suppliers,number,' . $supplier->supplier_id . ',supplier_id',
-            'contact_person' => 'required|string|max:255|unique:suppliers,contact_person,' . $supplier->supplier_id . ',supplier_id',
+            'contact_person' => 'required|string|max:255',
         ]);
 
         $supplier->update($validated);

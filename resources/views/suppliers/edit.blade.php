@@ -14,13 +14,27 @@
             EDIT SUPPLIER INFORMATION
         </div>
         @if ($errors->any())
-            <div class="alert alert-danger">
+        <div class="validation-errors-modal" id="validationErrorsModal">
+            <div class="validation-errors-content">
+                <span class="close-validation-modal" onclick="closeValidationModal()">&times;</span>
+                <div class="validation-icon">⚠️</div>
+                <h3>Validation Errors</h3>
                 <ul>
                     @foreach ($errors->all() as $error)
                         <li>{{ $error }}</li>
                     @endforeach
                 </ul>
+                <button class="validation-close-btn" onclick="closeValidationModal()">OK</button>
             </div>
+        </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                document.getElementById('validationErrorsModal').style.display = 'flex';
+            });
+            function closeValidationModal() {
+                document.getElementById('validationErrorsModal').style.display = 'none';
+            }
+        </script>
         @endif
         <div class="modal-body">
             <form action="{{ route('suppliers.update', $supplier->supplier_id) }}" method="POST">
